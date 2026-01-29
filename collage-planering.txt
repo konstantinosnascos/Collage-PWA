@@ -1,0 +1,516 @@
+CollageStudio PWA
+Projektplan för Offline Kollagapplikation
+Projektöversikt
+Bygg en Progressive Web App (PWA) för att skapa, redigera och exportera bildkollage. Appen ska kunna installeras på iPhone via lokalt nätverk och fungera helt offline. All data (bilder, mallar, projekt) sparas lokalt på enheten.
+
+Målgrupp: Din fru, för Instagram-innehåll till utställningshunden.
+
+Teknisk stack: Vite, HTML5, CSS3, JavaScript (Vanilla), Canvas API, Service Workers, IndexedDB
+
+Deadline & Milstolpar
+Fas	Beskrivning	Uppskattad tid
+Fas 1	Grundstruktur, PWA-setup, bildimport	1 vecka
+Fas 2	Canvas-editor, zoom, panorering	1 vecka
+Fas 3	Mallsystem med ritbara linjer	1 vecka
+Fas 4	Crop, export, Instagram-format	1 vecka
+Fas 5	Polish, testning, deployment	3-5 dagar
+Total uppskattad tid: 4-5 veckor (vid deltidsutveckling)
+
+Krav (MVP)
+1. Domänmodell / Datastruktur
+text
+Project
+├── id: string (UUID)
+├── name: string
+├── createdAt: timestamp
+├── updatedAt: timestamp
+├── canvasWidth: number
+├── canvasHeight: number
+├── aspectRatio: string ("1:1" | "4:5" | "9:16" | "custom")
+├── backgroundColor: string
+└── cells: Cell[]
+
+Cell
+├── id: string (UUID)
+├── x: number (position i procent 0-100)
+├── y: number
+├── width: number (i procent)
+├── height: number
+├── image: ImageData | null
+├── imageOffsetX: number (för panorering inom cell)
+├── imageOffsetY: number
+├── imageScale: number (zoom inom cell)
+└── borderWidth: number
+
+ImageData
+├── id: string (UUID)
+├── blob: Blob
+├── originalName: string
+├── width: number
+├── height: number
+└── addedAt: timestamp
+
+Template
+├── id: string (UUID)
+├── name: string
+├── createdAt: timestamp
+├── aspectRatio: string
+├── cells: CellDefinition[] (utan bilder, bara layout)
+└── thumbnail: Blob
+
+DividerLine (för mallritning)
+├── id: string (UUID)
+├── orientation: "horizontal" | "vertical"
+├── position: number (procent 0-100)
+├── startPoint: number (procent, för partiella linjer)
+└── endPoint: number
+
+ExportSettings
+├── format: "png" | "jpg"
+├── quality: number (0.1-1.0)
+├── width: number (pixlar)
+└── height: number
+2. IndexedDB Schema
+javascript
+// Databas: CollageStudioDB
+
+// Object Stores:
+- projects      // Sparade kollageprojekt
+- templates     // Användarens egna mallar  
+- presetTemplates // Fördefinierade mallar
+- imageCache    // Temporär bildcache
+- settings      // Appinställningar
+3. Användargränssnitt (vyer)
+Vy	Beskrivning
+Hem/Galleri	Lista över sparade projekt och mallar
+Mallskapare	Rita linjer för att skapa celluppdelning
+Editor	Huvudarbetsyta för att bygga kollage
+Bildväljare	Importera bilder från enhet
+Export	Förhandsvisa och exportera färdigt kollage
+Inställningar	Appinställningar, datahantering
+4. Funktionskrav
+4.1 Bildhantering
+ Importera bilder från enhetens galleri (via <input type="file">)
+ Stöd för flera bilder samtidigt
+ Visa bildminiatyrer i en "bildbank"
+ Dra-och-släpp bild till cell
+ Ta bort bild från cell
+ Rotera bild 90° åt gången
+4.2 Canvas & Interaktion
+ Pinch-to-zoom på bild inom cell
+ Panorera bild inom cell (dra med finger)
+ Dubbelklicka/dubbelknacka för att passa in bild
+ Touch-events för mobil
+ Mouse-events för desktop (testning)
+4.3 Mallsystem
+ Fördefinierade mallar (2x1, 2x2, 3x3, 2x3, etc.)
+ Egen mallskapare:
+Rita horisontella linjer genom att dra finger
+Rita vertikala linjer
+Flytta befintliga linjer
+Ta bort linjer
+Förhandsvisning av resulterande celler
+ Spara egen mall med namn
+ Läsa in sparad mall
+ Ta bort mall
+4.4 Format & Crop
+ Instagram-format:
+Kvadrat (1:1) - 1080x1080
+Porträtt (4:5) - 1080x1350
+Story/Reels (9:16) - 1080x1920
+Landskap (1.91:1) - 1080x566
+ Anpassat format (fri bredd/höjd)
+ Byt format under redigering (behålla bilder, anpassa layout)
+4.5 Export
+ Exportera som PNG eller JPG
+ Valbar kvalitet (hög/medium/låg)
+ Spara till enhetens galleri
+ Dela direkt (Web Share API)
+4.6 Persistens & Offline
+ Service Worker för offline-funktion
+ Automatiskt spara projekt var 30:e sekund
+ Manuell spara-knapp
+ Ladda projekt från lista
+ PWA-manifest för installation
+5. Affärsregler / Logik
+text
+1. En cell kan endast innehålla en bild åt gången
+2. Zoom-nivå begränsas till 0.5x - 5x
+3. Linjer i mallskaparen snäpper till 5%-intervall för precision
+4. Minsta cellstorlek är 10% av canvas (undvik för små celler)
+5. Export-upplösning baseras på valt format (minst 1080px på kortaste sidan)
+6. Maximalt 20 celler per kollage (prestandaskäl)
+7. Bildcache rensas automatiskt efter 7 dagar för oanvända bilder
+6. Teknikkrav
+PWA-konfiguration
+javascript
+// vite.config.js med vite-plugin-pwa
+- Manifest med app-ikon (flera storlekar)
+- Service Worker för caching
+- Offline-fallback
+- "standalone" display mode
+Caching-strategi
+text
+- App-shell: Cache First
+- Bilder: Cache First med fallback
+- API (om någon): Network First
+Responsiv design
+text
+- Mobile-first approach
+- Touch-targets minst 44x44px
+- Fungera på iPhone SE (375px) och uppåt
+Stretch Goals (Valfria tillägg)
+Nivå 1 - Enkla tillägg
+ Ångra/Gör om (undo/redo)
+ Cellkanter (tjocklek, färg)
+ Bakgrundsfärg för kollage
+ Duplicera projekt
+Nivå 2 - Medelsvåra tillägg
+ Enkla bildfilter (svartvitt, sepia, ljusstyrka, kontrast)
+ Text-overlay på bilder
+ Avrundade hörn på celler
+ Skugga på celler
+Nivå 3 - Avancerade tillägg
+ Ändra cellstorlek genom att dra i kanter
+ Sammanfoga celler
+ Importera/exportera mallar som JSON-fil
+ Molnsynkronisering (Firebase/Supabase)
+ Bildkomprimering före lagring
+ Historik med miniatyrer
+Filstruktur
+text
+collage-studio/
+├── index.html
+├── vite.config.js
+├── package.json
+├── public/
+│   ├── manifest.json
+│   ├── icons/
+│   │   ├── icon-192.png
+│   │   ├── icon-512.png
+│   │   └── apple-touch-icon.png
+│   └── offline.html
+├── src/
+│   ├── main.js                 # Entry point
+│   ├── app.js                  # App-initiering, routing
+│   ├── styles/
+│   │   ├── main.css
+│   │   ├── variables.css
+│   │   ├── components/
+│   │   └── views/
+│   ├── views/
+│   │   ├── HomeView.js
+│   │   ├── EditorView.js
+│   │   ├── TemplateCreatorView.js
+│   │   ├── ImagePickerView.js
+│   │   ├── ExportView.js
+│   │   └── SettingsView.js
+│   ├── components/
+│   │   ├── Canvas.js
+│   │   ├── Cell.js
+│   │   ├── Toolbar.js
+│   │   ├── ImageBank.js
+│   │   ├── TemplateGrid.js
+│   │   ├── DividerLine.js
+│   │   ├── FormatPicker.js
+│   │   └── Modal.js
+│   ├── services/
+│   │   ├── DatabaseService.js  # IndexedDB wrapper
+│   │   ├── ImageService.js     # Bildhantering, komprimering
+│   │   ├── ExportService.js    # Canvas → bild
+│   │   ├── TemplateService.js  # Mall-logik
+│   │   └── StorageService.js   # localStorage för settings
+│   ├── utils/
+│   │   ├── touch-handlers.js   # Pinch, pan, tap
+│   │   ├── geometry.js         # Beräkningar för celler/linjer
+│   │   ├── uuid.js
+│   │   └── debounce.js
+│   ├── constants/
+│   │   ├── formats.js          # Instagram-format
+│   │   └── presetTemplates.js  # Fördefinierade mallar
+│   └── sw.js                   # Service Worker
+└── tests/
+    ├── services/
+    │   ├── DatabaseService.test.js
+    │   └── ImageService.test.js
+    └── utils/
+        └── geometry.test.js
+Testning
+Enhetstester (Vitest)
+text
+- [ ] geometry.js: Beräkna cellpositioner från linjer
+- [ ] geometry.js: Konvertera procent ↔ pixlar
+- [ ] ImageService: Komprimera bild
+- [ ] TemplateService: Validera mall-struktur
+Integrationstester
+text
+- [ ] DatabaseService: Spara/läs projekt
+- [ ] DatabaseService: Spara/läs mall
+- [ ] ExportService: Generera korrekt bildstorlek
+Manuella testfall
+text
+Scenario 1: Skapa enkelt 2x2 kollage
+1. Öppna appen
+2. Välj "Nytt projekt"
+3. Välj 2x2 mall
+4. Importera 4 bilder
+5. Dra bilder till celler
+6. Zooma in på en bild
+7. Exportera till galleri
+→ Förväntat: Kollage sparas i rätt format
+
+Scenario 2: Skapa egen mall
+1. Gå till "Skapa mall"
+2. Dra en horisontell linje vid 50%
+3. Dra en vertikal linje vid 33% (övre halvan)
+4. Spara mall som "Hund-layout"
+5. Skapa nytt projekt med mallen
+→ Förväntat: 3 celler skapas korrekt
+
+Scenario 3: Offline-funktionalitet
+1. Installera PWA
+2. Skapa ett projekt med bilder
+3. Stäng av WiFi/mobildata
+4. Stäng och öppna appen
+5. Redigera projektet
+→ Förväntat: Allt fungerar offline
+Installation på iPhone (Lokalt nätverk)
+Steg-för-steg
+bash
+# 1. Kör utvecklingsserver med nätverksåtkomst
+npm run dev -- --host
+
+# 2. Notera IP-adressen (t.ex. 192.168.1.100:5173)
+
+# 3. På iPhone:
+#    - Öppna Safari (måste vara Safari för PWA)
+#    - Gå till http://192.168.1.100:5173
+#    - Klicka dela-knappen
+#    - Välj "Lägg till på hemskärmen"
+
+# OBS: För HTTPS (krävs för vissa PWA-funktioner):
+# Alternativ A: Använd ngrok för tunnel
+# Alternativ B: Skapa self-signed cert (mer komplext)
+HTTPS-lösning för full PWA-funktionalitet
+bash
+# Installera mkcert för lokala certifikat
+brew install mkcert  # macOS
+mkcert -install
+mkcert localhost 192.168.1.100
+
+# Konfigurera Vite för HTTPS
+# vite.config.js
+export default {
+  server: {
+    https: {
+      key: './192.168.1.100-key.pem',
+      cert: './192.168.1.100.pem'
+    },
+    host: true
+  }
+}
+Kommandoreferens (Utveckling)
+bash
+# Starta utvecklingsserver
+npm run dev
+
+# Starta med nätverksåtkomst (för iPhone-test)
+npm run dev -- --host
+
+# Bygg för produktion
+npm run build
+
+# Förhandsgranska produktionsbygge
+npm run preview
+
+# Kör tester
+npm run test
+
+# Lint
+npm run lint
+Förslag på första implementation
+Vecka 1: Grundfundament
+Dag 1-2: Projektsetup
+
+javascript
+// 1. Skapa Vite-projekt
+npm create vite@latest collage-studio -- --template vanilla
+cd collage-studio
+npm install
+
+// 2. Installera dependencies
+npm install vite-plugin-pwa workbox-precaching idb
+
+// 3. Konfigurera PWA i vite.config.js
+Dag 3-4: Databaslagret
+
+javascript
+// services/DatabaseService.js - Enkel start
+
+import { openDB } from 'idb';
+
+const DB_NAME = 'CollageStudioDB';
+const DB_VERSION = 1;
+
+export async function initDB() {
+  return openDB(DB_NAME, DB_VERSION, {
+    upgrade(db) {
+      // Projects store
+      if (!db.objectStoreNames.contains('projects')) {
+        const projectStore = db.createObjectStore('projects', { keyPath: 'id' });
+        projectStore.createIndex('updatedAt', 'updatedAt');
+      }
+      
+      // Templates store
+      if (!db.objectStoreNames.contains('templates')) {
+        db.createObjectStore('templates', { keyPath: 'id' });
+      }
+      
+      // Image cache
+      if (!db.objectStoreNames.contains('images')) {
+        db.createObjectStore('images', { keyPath: 'id' });
+      }
+    }
+  });
+}
+
+export async function saveProject(project) {
+  const db = await initDB();
+  project.updatedAt = Date.now();
+  return db.put('projects', project);
+}
+
+export async function getProject(id) {
+  const db = await initDB();
+  return db.get('projects', id);
+}
+
+export async function getAllProjects() {
+  const db = await initDB();
+  return db.getAllFromIndex('projects', 'updatedAt');
+}
+Dag 5-7: Enkel Canvas-rendering
+
+javascript
+// components/Canvas.js - Grundstruktur
+
+export class CollageCanvas {
+  constructor(containerElement) {
+    this.container = containerElement;
+    this.canvas = document.createElement('canvas');
+    this.ctx = this.canvas.getContext('2d');
+    this.cells = [];
+    this.activeCell = null;
+    
+    this.container.appendChild(this.canvas);
+    this.setupEventListeners();
+    this.resize();
+  }
+  
+  resize() {
+    const rect = this.container.getBoundingClientRect();
+    // Behåll aspect ratio
+    this.canvas.width = rect.width * window.devicePixelRatio;
+    this.canvas.height = rect.height * window.devicePixelRatio;
+    this.canvas.style.width = rect.width + 'px';
+    this.canvas.style.height = rect.height + 'px';
+    this.render();
+  }
+  
+  setTemplate(template) {
+    this.cells = template.cells.map(cellDef => ({
+      ...cellDef,
+      image: null,
+      imageScale: 1,
+      imageOffsetX: 0,
+      imageOffsetY: 0
+    }));
+    this.render();
+  }
+  
+  render() {
+    const ctx = this.ctx;
+    const w = this.canvas.width;
+    const h = this.canvas.height;
+    
+    // Clear
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, w, h);
+    
+    // Draw cells
+    this.cells.forEach((cell, index) => {
+      const x = (cell.x / 100) * w;
+      const y = (cell.y / 100) * h;
+      const cellW = (cell.width / 100) * w;
+      const cellH = (cell.height / 100) * h;
+      
+      // Cell background
+      ctx.fillStyle = '#f0f0f0';
+      ctx.fillRect(x, y, cellW, cellH);
+      
+      // Draw image if exists
+      if (cell.image) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(x, y, cellW, cellH);
+        ctx.clip();
+        
+        // Apply scale and offset
+        const img = cell.image.element;
+        const scale = cell.imageScale;
+        const drawW = img.width * scale;
+        const drawH = img.height * scale;
+        const drawX = x + cell.imageOffsetX;
+        const drawY = y + cell.imageOffsetY;
+        
+        ctx.drawImage(img, drawX, drawY, drawW, drawH);
+        ctx.restore();
+      }
+      
+      // Cell border
+      ctx.strokeStyle = '#cccccc';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(x, y, cellW, cellH);
+    });
+  }
+  
+  setupEventListeners() {
+    // Touch events för mobil
+    this.canvas.addEventListener('touchstart', this.handleTouchStart.bind(this));
+    this.canvas.addEventListener('touchmove', this.handleTouchMove.bind(this));
+    this.canvas.addEventListener('touchend', this.handleTouchEnd.bind(this));
+    
+    // Mouse events för desktop-testning
+    this.canvas.addEventListener('mousedown', this.handleMouseDown.bind(this));
+    this.canvas.addEventListener('mousemove', this.handleMouseMove.bind(this));
+    this.canvas.addEventListener('mouseup', this.handleMouseUp.bind(this));
+  }
+  
+  // ... touch/mouse handlers för pan och zoom
+}
+Designbeslut & Motiveringar
+Varför IndexedDB istället för localStorage?
+localStorage har 5-10MB gräns, otillräckligt för bilder
+IndexedDB hanterar Blobs effektivt
+Bättre för strukturerad data
+Varför Vanilla JS istället för React/Vue?
+Mindre bundle-storlek (viktigt för PWA)
+Du lär dig grunderna djupare
+Inga extra dependencies att underhålla
+Canvas-manipulation är lättare utan framework overhead
+Varför Canvas istället för DOM-element?
+Bättre prestanda vid många bilder
+Enklare export till bild
+Exakt kontroll över rendering
+Standard för bildmanipulation
+Varför procentbaserade positioner?
+Skalbar till olika skärmstorlekar
+Enkelt att konvertera till pixlar vid export
+Konsistenta mallar oavsett enhet
+Vill du att jag börjar med någon specifik del?
+Jag föreslår att vi börjar med:
+
+Projektsetup med PWA-konfiguration - så du kan testa installation direkt
+DatabaseService - så data sparas korrekt
+Enkel Canvas med celler - så hon kan se något visuellt snabbt
+Vilken del vill du börja med? Jag kan ge dig mer detaljerad kod för varje modul.
